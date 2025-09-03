@@ -11,7 +11,7 @@ const connection = new Connection(
   'confirmed'
 )
 
-interface ParsedTransaction {
+export interface ParsedTransaction {
   signature: string
   type: string
   status: string
