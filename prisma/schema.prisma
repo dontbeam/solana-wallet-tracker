@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  address      String        @unique
+  name         String?
+  tag          String?
+  priority     Int           @default(0) // 0 = low, 1 = medium, 2 = high
+  isActive     Boolean       @default(true)
+  lastSync     DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  transactions Transaction[]
+  alerts       Alert[]
+  
+  @@index([address])
+  @@index([priority])
+}
+
+model Transaction {
+  id               String    @id @default(cuid())
+  signature        String    @unique
+  walletId         String
+  wallet           Wallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  type             String    // "sol_transfer", "spl_transfer", "nft_transfer", "program_interaction"
+  status           String    // "success", "failed"
+  
+  blockTime        DateTime?
+  slot             Int
+  
+  from             String
+  to               String?
+  
+  amount           String?   // Store as string to handle large numbers
+  tokenMint        String?   // For SPL tokens
+  tokenSymbol      String?
+  tokenDecimals    Int?
+  
+  fee              String?
+  
+  programId        String?   // For program interactions
+  instructionData  String?   // JSON string of instruction data
+  
+  rawData          String    // JSON string of full transaction data
+  
+  createdAt        DateTime  @default(now())
+  
+  @@index([walletId])
+  @@index([blockTime])
+  @@index([type])
+  @@index([signature])
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  name        String
+  walletId    String?
+  wallet      Wallet?   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  
+  type        String    // "amount_threshold", "token_transfer", "program_interaction", "any_activity"
+  condition   String    // JSON string of conditions
+  
+  isActive    Boolean   @default(true)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  notifications Notification[]
+  
+  @@index([walletId])
+  @@index([type])
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  alertId     String
+  alert       Alert     @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  
+  title       String
+  message     String
+  data        String?   // JSON string of relevant data
+  
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  
+  @@index([alertId])
+  @@index([isRead])
+  @@index([createdAt])
+}
